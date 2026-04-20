@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+model Company {
+  id                     Int       @id @default(autoincrement())
+  cnpjFull               String    @unique @map("cnpj_full") @db.VarChar(18)
+  cnpjBase               String    @map("cnpj_base") @db.VarChar(8)
+  cnpjOrder              String    @map("cnpj_order") @db.VarChar(4)
+  cnpjDv                 String    @map("cnpj_dv") @db.VarChar(2)
+  companyName            String    @map("company_name") @db.VarChar(150)
+  tradeName              String?   @map("trade_name") @db.VarChar(55)
+  legalNatureCode        String?   @map("legal_nature_code") @db.VarChar(4)
+  companySizeCode        String?   @map("company_size_code") @db.VarChar(2)
+  responsibleEntity      String?   @map("responsible_entity") @db.VarChar(20)
+  capitalSocial          Decimal?  @map("capital_social") @db.Decimal(15, 2)
+  registrationStatus     String?   @map("registration_status") @db.VarChar(2)
+  registrationStatusDate DateTime? @map("registration_status_date") @db.Date
+  state                  String?   @db.VarChar(2)
+  city                   String?   @db.VarChar(50)
+  cityIbgeCode           String?   @map("city_ibge_code") @db.VarChar(7)
+  neighborhood           String?   @db.VarChar(50)
+  street                 String?   @db.VarChar(60)
+  streetType             String?   @map("street_type") @db.VarChar(20)
+  streetNumber           String?   @map("street_number") @db.VarChar(6)
+  addressComplement      String?   @map("address_complement") @db.VarChar(156)
+  zipCode                String?   @map("zip_code") @db.VarChar(8)
+  mainCnaeCode           String?   @map("main_cnae_code") @db.VarChar(7)
+  latitude               Float?
+  longitude              Float?
+  geocodedAt             DateTime? @map("geocoded_at")
+  geocodingSource        String?   @map("geocoding_source") @db.VarChar(30)
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  secondaryCnaes CompanySecondaryCnae[]
+  mainCnae       Cnae?                  @relation(fields: [mainCnaeCode], references: [code])
+
+  @@index([cnpjBase])
+  @@index([city, state])
+  @@index([mainCnaeCode])
+  @@index([registrationStatus])
+  @@index([neighborhood])
+  @@index([companySizeCode])
+  @@map("companies")
+}
+
+model CompanySecondaryCnae {
+  id        Int     @id @default(autoincrement())
+  companyId Int     @map("company_id")
+  cnaeCode  String  @map("cnae_code") @db.VarChar(7)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, cnaeCode])
+  @@map("company_secondary_cnaes")
+}
+
+model Cnae {
+  code         String  @id @db.VarChar(7)
+  description  String  @db.VarChar(200)
+  section      String? @db.VarChar(5)
+  division     String? @db.VarChar(5)
+  groupName    String? @map("group_name") @db.VarChar(200)
+  className    String? @map("class_name") @db.VarChar(200)
+  subclassName String? @map("subclass_name") @db.VarChar(200)
+  segment      String? @db.VarChar(30)
+  segmentRule  String? @map("segment_rule") @db.VarChar(50)
+
+  companies Company[]
+
+  @@map("cnaes")
+}
+
+model LegalNature {
+  code        String @id @db.VarChar(4)
+  description String @db.VarChar(150)
+
+  @@map("legal_natures")
+}
+
+model Municipality {
+  ibgeCode  String @id @map("ibge_code") @db.VarChar(7)
+  name      String @db.VarChar(100)
+  stateCode String @map("state_code") @db.VarChar(2)
+  state     String @db.VarChar(2)
+
+  @@map("municipalities")
+}
+
+model ImportJob {
+  id               Int       @id @default(autoincrement())
+  source           String    @db.VarChar(100)
+  startedAt        DateTime  @default(now()) @map("started_at")
+  finishedAt       DateTime? @map("finished_at")
+  status           String    @default("running") @db.VarChar(20)
+  recordsProcessed Int?      @map("records_processed")
+  recordsImported  Int?      @map("records_imported")
+  recordsSkipped   Int?      @map("records_skipped")
+  notes            String?   @db.Text
+
+  @@map("import_jobs")
+}
