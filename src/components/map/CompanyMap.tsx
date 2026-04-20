@@ -29,16 +29,19 @@ interface Props {
 
 const DEFAULT_CENTER: [number, number] = [-26.7717, -48.6478];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LeafletLib = any;
+
 export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 13 }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<unknown>(null);
-  const clusterRef = useRef<unknown>(null);
+  const mapInstanceRef = useRef<LeafletLib>(null);
+  const clusterRef = useRef<LeafletLib>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     async function initMap() {
-      const L = (await import("leaflet")).default;
+      const L: LeafletLib = (await import("leaflet")).default;
 
       if (!document.querySelector('link[href*="leaflet.css"]')) {
         const link1 = document.createElement("link");
@@ -57,9 +60,8 @@ export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 
         document.head.appendChild(link3);
       }
 
-      const win = window as unknown as Record<string, unknown>;
-const wL = win.L as Record<string, unknown> | undefined;
-if (!wL?.MarkerClusterGroup) {
+      const win = window as LeafletLib;
+      if (!win.L?.MarkerClusterGroup) {
         await new Promise<void>((resolve) => {
           const script = document.createElement("script");
           script.src = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
@@ -87,7 +89,6 @@ if (!wL?.MarkerClusterGroup) {
       map.addLayer(cluster);
       mapInstanceRef.current = map;
       clusterRef.current = cluster;
-
       addMarkers(L, cluster, companies);
     }
 
@@ -95,7 +96,7 @@ if (!wL?.MarkerClusterGroup) {
 
     return () => {
       if (mapInstanceRef.current) {
-        (mapInstanceRef.current as { remove: () => void }).remove();
+        mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
         clusterRef.current = null;
       }
@@ -106,14 +107,14 @@ if (!wL?.MarkerClusterGroup) {
   useEffect(() => {
     if (!mapInstanceRef.current || !clusterRef.current) return;
     async function updateMarkers() {
-      const L = (await import("leaflet")).default;
-      (clusterRef.current as { clearLayers: () => void }).clearLayers();
+      const L: LeafletLib = (await import("leaflet")).default;
+      clusterRef.current.clearLayers();
       addMarkers(L, clusterRef.current, companies);
     }
     updateMarkers();
   }, [companies]);
 
-  function addMarkers(L: typeof import("leaflet").default, cluster: unknown, comps: MapCompany[]) {
+  function addMarkers(L: LeafletLib, cluster: LeafletLib, comps: MapCompany[]) {
     comps.forEach((c) => {
       if (!c.latitude || !c.longitude) return;
       const segment = c.mainCnae?.segment || "Outros";
@@ -145,7 +146,7 @@ if (!wL?.MarkerClusterGroup) {
 
       const marker = L.marker([c.latitude, c.longitude], { icon });
       marker.bindPopup(popupHtml, { maxWidth: 280, minWidth: 220 });
-      (cluster as { addLayer: (m: unknown) => void }).addLayer(marker);
+      cluster.addLayer(marker);
     });
   }
 
