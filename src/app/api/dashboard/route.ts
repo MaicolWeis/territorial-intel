@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
       byNeighborhoodRaw,
       topCnaesRaw,
       allCompanies,
+      byLegalNatureRaw,
     ] = await Promise.all([
       prisma.company.count({ where }),
       prisma.company.groupBy({
@@ -56,7 +57,17 @@ export async function GET(req: NextRequest) {
       }),
       prisma.company.findMany({
         where,
-        select: { mainCnae: { select: { segment: true } } },
+        select: {
+          mainCnae: { select: { segment: true } },
+          legalNatureCode: true,
+          responsibleEntity: true,
+        },
+      }),
+      prisma.company.groupBy({
+        by: ["legalNatureCode"],
+        _count: { id: true },
+        where,
+        orderBy: { _count: { id: "desc" } },
       }),
     ]);
 
@@ -70,6 +81,23 @@ export async function GET(req: NextRequest) {
       .map(([segment, count]) => ({ segment, count }))
       .sort((a, b) => b.count - a.count);
 
+    // MEI vs Não-MEI
+    const meiCount = allCompanies.filter(c => c.legalNatureCode === "2135").length;
+    const nonMeiCount = total - meiCount;
+
+    // Sem responsável identificado
+    const semSocios = allCompanies.filter(c => !c.responsibleEntity || c.responsibleEntity.trim() === "").length;
+
+    // Legal nature labels
+    const LEGAL_NATURE_LABELS: Record<string, string> = {
+      "2135": "MEI",
+      "2062": "Ltda",
+      "2054": "S/A",
+      "2305": "Autônomo",
+      "1015": "Empresa Pública",
+      "2143": "EIRELI",
+    };
+
     // Get CNAE descriptions
     const cnaeCodesRaw = topCnaesRaw.map((r) => r.mainCnaeCode).filter(Boolean) as string[];
     const cnaeDescriptions = await prisma.cnae.findMany({
@@ -80,6 +108,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       total,
+      meiCount,
+      nonMeiCount,
+      semSocios,
       bySegment,
       byStatus: byStatusRaw.map((r) => ({
         status: r.registrationStatus || "00",
@@ -98,6 +129,11 @@ export async function GET(req: NextRequest) {
       topCnaes: topCnaesRaw.map((r) => ({
         code: r.mainCnaeCode || "?",
         description: cnaeMap[r.mainCnaeCode || ""] || "Não classificado",
+        count: r._count.id,
+      })),
+      byLegalNature: byLegalNatureRaw.map((r) => ({
+        code: r.legalNatureCode || "??",
+        label: LEGAL_NATURE_LABELS[r.legalNatureCode || ""] || r.legalNatureCode || "Outros",
         count: r._count.id,
       })),
     });
