@@ -43,9 +43,9 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  const activeCount = stats?.byStatus.find(s => s.status === "02")?.count || 0;
-  const restaurantCount = stats?.bySegment.find(s => s.segment === "Restaurantes")?.count || 0;
-  const industryCount = stats?.bySegment.find(s => s.segment === "Indústria")?.count || 0;
+ const activeCount = stats?.byStatus?.find(s => s.status === "02")?.count || 0;
+const restaurantCount = stats?.bySegment?.find(s => s.segment === "Restaurantes")?.count || 0;
+const industryCount = stats?.bySegment?.find(s => s.segment === "Indústria")?.count || 0;
 
   const exportUrl = () => {
     const q = new URLSearchParams({ city: DEFAULT_CITY });
