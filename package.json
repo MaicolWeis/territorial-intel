@@ -1,0 +1,46 @@
+{
+  "name": "territorial-intel",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "etl:municipalities": "node etl/import-municipalities.js",
+    "etl:cnae": "node etl/import-cnae.js",
+    "etl:companies": "node etl/import-companies.js",
+    "etl:geocode": "node etl/geocode-companies.js",
+    "etl:all": "npm run etl:municipalities && npm run etl:cnae && npm run etl:companies && npm run etl:geocode"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "csv-parse": "^5.5.3",
+    "iconv-lite": "^0.6.3",
+    "leaflet": "^1.9.4",
+    "next": "14.0.4",
+    "node-fetch": "^3.3.2",
+    "p-limit": "^5.0.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^2.10.3",
+    "unzipper": "^0.10.14",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.8",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "postcss": "^8",
+    "prisma": "5.22.0",
+    "tailwindcss": "^3.3.0"
+  }
+}
