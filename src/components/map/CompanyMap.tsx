@@ -77,7 +77,6 @@ if (!wL?.MarkerClusterGroup) {
         maxZoom: 19,
       }).addTo(map);
 
-      // @ts-expect-error - loaded via script tag
       const cluster = L.markerClusterGroup({
         maxClusterRadius: 60,
         spiderfyOnMaxZoom: true,
