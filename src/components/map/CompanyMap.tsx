@@ -27,7 +27,6 @@ interface Props {
   zoom?: number;
 }
 
-// Penha, SC default
 const DEFAULT_CENTER: [number, number] = [-26.7717, -48.6478];
 
 export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 13 }: Props) {
@@ -39,30 +38,44 @@ export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 
     if (typeof window === "undefined") return;
 
     async function initMap() {
-      // Dynamic imports to avoid SSR issues
       const L = (await import("leaflet")).default;
-      await import("leaflet/dist/leaflet.css");
-      // @ts-expect-error - leaflet.markercluster has no types
-      await import("leaflet.markercluster");
-      // @ts-expect-error
-      await import("leaflet.markercluster/dist/MarkerCluster.css");
-      // @ts-expect-error
-      await import("leaflet.markercluster/dist/MarkerCluster.Default.css");
+
+      if (!document.querySelector('link[href*="leaflet.css"]')) {
+        const link1 = document.createElement("link");
+        link1.rel = "stylesheet";
+        link1.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(link1);
+      }
+      if (!document.querySelector('link[href*="MarkerCluster"]')) {
+        const link2 = document.createElement("link");
+        link2.rel = "stylesheet";
+        link2.href = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css";
+        document.head.appendChild(link2);
+        const link3 = document.createElement("link");
+        link3.rel = "stylesheet";
+        link3.href = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css";
+        document.head.appendChild(link3);
+      }
+
+      if (!(window as unknown as Record<string, unknown>).L?.MarkerClusterGroup) {
+        await new Promise<void>((resolve) => {
+          const script = document.createElement("script");
+          script.src = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
+          script.onload = () => resolve();
+          document.head.appendChild(script);
+        });
+      }
 
       if (!mapRef.current || mapInstanceRef.current) return;
 
-      const map = L.map(mapRef.current, {
-        center,
-        zoom,
-        zoomControl: true,
-      });
+      const map = L.map(mapRef.current, { center, zoom });
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
         maxZoom: 19,
       }).addTo(map);
 
-      // @ts-expect-error
+      // @ts-expect-error - loaded via script tag
       const cluster = L.markerClusterGroup({
         maxClusterRadius: 60,
         spiderfyOnMaxZoom: true,
@@ -81,8 +94,7 @@ export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 
 
     return () => {
       if (mapInstanceRef.current) {
-        // @ts-expect-error
-        mapInstanceRef.current.remove();
+        (mapInstanceRef.current as { remove: () => void }).remove();
         mapInstanceRef.current = null;
         clusterRef.current = null;
       }
@@ -90,32 +102,24 @@ export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update markers when companies change
   useEffect(() => {
     if (!mapInstanceRef.current || !clusterRef.current) return;
     async function updateMarkers() {
       const L = (await import("leaflet")).default;
-      // @ts-expect-error
-      clusterRef.current.clearLayers();
+      (clusterRef.current as { clearLayers: () => void }).clearLayers();
       addMarkers(L, clusterRef.current, companies);
     }
     updateMarkers();
   }, [companies]);
 
-  function addMarkers(L: unknown, cluster: unknown, comps: MapCompany[]) {
-    const Leaflet = L as typeof import("leaflet").default;
+  function addMarkers(L: typeof import("leaflet").default, cluster: unknown, comps: MapCompany[]) {
     comps.forEach((c) => {
       if (!c.latitude || !c.longitude) return;
       const segment = c.mainCnae?.segment || "Outros";
       const color = getSegmentColor(segment);
 
-      const icon = Leaflet.divIcon({
-        html: `<div style="
-          width: 13px; height: 13px; border-radius: 50%;
-          background: ${color};
-          border: 2px solid white;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-        "></div>`,
+      const icon = L.divIcon({
+        html: `<div style="width:13px;height:13px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>`,
         className: "",
         iconSize: [13, 13],
         iconAnchor: [6, 6],
@@ -124,9 +128,7 @@ export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 
       const address = [c.streetType, c.street, c.streetNumber].filter(Boolean).join(" ");
       const popupHtml = `
         <div style="min-width:220px;font-family:system-ui,sans-serif">
-          <div style="font-weight:600;font-size:13px;margin-bottom:6px;line-height:1.3">
-            ${c.tradeName || c.companyName}
-          </div>
+          <div style="font-weight:600;font-size:13px;margin-bottom:6px;line-height:1.3">${c.tradeName || c.companyName}</div>
           ${c.tradeName ? `<div style="font-size:11px;color:#64748b;margin-bottom:4px">${c.companyName}</div>` : ""}
           <table style="width:100%;font-size:11px;border-collapse:collapse">
             <tr><td style="color:#94a3b8;padding:2px 6px 2px 0;white-space:nowrap">CNPJ</td><td style="font-weight:500">${formatCnpj(c.cnpjFull)}</td></tr>
@@ -138,17 +140,13 @@ export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 
             <tr><td style="color:#94a3b8;padding:2px 6px 2px 0">Bairro</td><td>${c.neighborhood || "–"}</td></tr>
             ${address ? `<tr><td style="color:#94a3b8;padding:2px 6px 2px 0">Endereço</td><td>${address}</td></tr>` : ""}
           </table>
-        </div>
-      `;
+        </div>`;
 
-      const marker = Leaflet.marker([c.latitude, c.longitude], { icon });
+      const marker = L.marker([c.latitude, c.longitude], { icon });
       marker.bindPopup(popupHtml, { maxWidth: 280, minWidth: 220 });
-      // @ts-expect-error
-      cluster.addLayer(marker);
+      (cluster as { addLayer: (m: unknown) => void }).addLayer(marker);
     });
   }
 
-  return (
-    <div ref={mapRef} style={{ width: "100%", height: "100%", minHeight: 400 }} />
-  );
+  return <div ref={mapRef} style={{ width: "100%", height: "100%", minHeight: 400 }} />;
 }
