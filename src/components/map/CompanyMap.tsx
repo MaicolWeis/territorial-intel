@@ -57,7 +57,9 @@ export default function CompanyMap({ companies, center = DEFAULT_CENTER, zoom = 
         document.head.appendChild(link3);
       }
 
-      if (!(window as unknown as Record<string, unknown>).L?.MarkerClusterGroup) {
+      const win = window as unknown as Record<string, unknown>;
+const wL = win.L as Record<string, unknown> | undefined;
+if (!wL?.MarkerClusterGroup) {
         await new Promise<void>((resolve) => {
           const script = document.createElement("script");
           script.src = "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js";
